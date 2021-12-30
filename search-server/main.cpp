@@ -35,7 +35,10 @@ vector<string> SplitIntoWords(const string& text) {
                 words.push_back(word);
                 word.clear();
             }
-        } else word += c;            
+        } 
+        else {
+            word += c;  
+        }          
     }
     if (!word.empty()) {
         words.push_back(word);
@@ -69,26 +72,12 @@ public:
 
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) {
         const vector<string> words = SplitIntoWordsNoStop(document);
-        for (const string& word : words){
+        for (const string& word : words) {
             documents_[word][document_id] += (1.0 / words.size());
         }
         document_rating_[document_id] = ComputeAverageRating(ratings);
         document_status_[document_id] = status;
         document_count_++;
-    }
-
-    vector<Document> FindTopDocuments(const string& raw_query) const {
-        const Query query_words = ParseQuery(raw_query);
-        auto matched_documents = FindAllDocuments(query_words, [](int document_id, DocumentStatus status, int rating) 
-                                                                { return status == DocumentStatus::ACTUAL; });
-        sort(matched_documents.begin(), matched_documents.end(),
-            [](const Document& lhs, const Document& rhs) {
-            return (lhs.relevance > rhs.relevance) || (abs(lhs.relevance - rhs.relevance) < EPSILON && lhs.rating > rhs.rating);
-            });                       
-        if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
-            matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
-        }
-        return matched_documents;
     }
 
     template <typename Predicate>
@@ -97,7 +86,7 @@ public:
         auto matched_documents = FindAllDocuments(query_words, predicate);
         sort(matched_documents.begin(), matched_documents.end(),
             [](const Document& lhs, const Document& rhs) {
-            return (lhs.relevance > rhs.relevance) || (abs(lhs.relevance - rhs.relevance) < EPSILON && lhs.rating > rhs.rating);
+                return (lhs.relevance > rhs.relevance) || (abs(lhs.relevance - rhs.relevance) < EPSILON && lhs.rating > rhs.rating);
             });                
          if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
               matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
@@ -105,43 +94,29 @@ public:
          return matched_documents;
     }
 
-    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus request_status) const {
+    vector<Document> FindTopDocuments(const string& raw_query, DocumentStatus request_status = DocumentStatus::ACTUAL) const {
         return FindTopDocuments(raw_query,
-                                [request_status](int document_id, DocumentStatus status, int rating){ 
-                                return status == request_status; });
+                                [request_status](int document_id, DocumentStatus status, int rating) { 
+                                    return status == request_status; });
     } 
 
-    int GetDocumentCount(){
+    int GetDocumentCount() {
         return document_count_;
     }
 
-    vector<int> ReadRatings(){
-        vector<int> result;
-        int rating_count;
-        int rating;
-        cin >> rating_count;
-        cin.get(); 
-        for (int i = 0; i < rating_count; ++i){
-            cin >> rating; 
-            result.push_back(rating);
-        }
-        cin.get();
-        return result;
-    }
-
-      tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const{
+      tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
         vector<string> words;
         Query query_words = ParseQuery(raw_query);
-        for(const string& word : query_words.minus_words){
+        for(const string& word : query_words.minus_words) {
             if(documents_.count(word)){
-                if (documents_.at(word).count(document_id)){
+                if (documents_.at(word).count(document_id)) {
                     return tuple(words, document_status_.at(document_id));
                 }
             }
         }
         for (const string& word : query_words.plus_words) {           
-            if (documents_.count(word)){
-                if (documents_.at(word).count(document_id)){
+            if (documents_.count(word)) {
+                if (documents_.at(word).count(document_id)) {
                     words.push_back(word);
                 }
             }
@@ -183,27 +158,26 @@ private:
     Query ParseQuery(const string& text) const {
         Query query_words;
         for (const string& word : SplitIntoWordsNoStop(text)) {
-            if (IsMinusWord(word) && !IsStopWord(word.substr(1))){  
+            if (IsMinusWord(word) && !IsStopWord(word.substr(1))) {  
                 query_words.minus_words.insert(word.substr(1));
-            } else query_words.plus_words.insert(word);            
+            } 
+            else {
+                query_words.plus_words.insert(word);  
+            }          
         }
         return query_words;
     }
     
-    double CalculateIDF(const string& word) const{
+    double CalculateIDF(const string& word) const {
         double idf = 0.0;
-        if (documents_.count(word)){
+        if (documents_.count(word)) {
             idf = log((document_count_ * 1.0) / documents_.at(word).size());
         }
         return idf;
     }
 
-    static int ComputeAverageRating(const vector<int>& ratings){
-        if (ratings.empty()){
-            return 0;
-        }
-        int average_rating = (accumulate(ratings.begin(), ratings.end(), 0)) / (static_cast<int>(ratings.size()));
-        return average_rating;
+    static int ComputeAverageRating(const vector<int>& ratings) {
+        return (accumulate(ratings.begin(), ratings.end(), 0)) / (static_cast<int>(ratings.size()));
     }
 
     template <typename Predicate>
@@ -212,8 +186,10 @@ private:
         map<int, double> document_to_relevance;
         for (const auto& word : query_words.plus_words) {            
             if (documents_.count(word)) {
-                for (const auto& [document_id, term_freq] : documents_.at(word)){                    
-                    if (predicate(document_id, document_status_.at(document_id), document_rating_.at(document_id))){
+                for (const auto& [document_id, term_freq] : documents_.at(word)) {                    
+                //Если я правильно понял, вы предлагаете объеденить данные о рейтинге и статусе в один контейнер?
+                //И в условии цикла распаковать его, вытащить из него id, статус, рейтинг и сразу передать в функцию-предикат?                 
+                    if (predicate(document_id, document_status_.at(document_id), document_rating_.at(document_id))) {
                         document_to_relevance[document_id] += term_freq * CalculateIDF(word);
                     }
                 }
@@ -221,12 +197,12 @@ private:
         }
         for (const auto& word : query_words.minus_words) {                
             if (documents_.count(word)){
-                for (const auto& [document_id, term_freq] : documents_.at(word)){
+                for (const auto& [document_id, term_freq] : documents_.at(word)) {
                     document_to_relevance.erase(document_id);
                 }
             }
         }
-        for (const auto& [document_id, relevance] : document_to_relevance){
+        for (const auto& [document_id, relevance] : document_to_relevance) {
             matched_documents.push_back({document_id, relevance, document_rating_.at(document_id)});
         }
         return matched_documents;
