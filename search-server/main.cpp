@@ -46,7 +46,6 @@ vector<string> SplitIntoWords(const string& text) {
     return words;
 }
 
-
 struct Document {
     int id;
     double relevance;
@@ -75,9 +74,7 @@ public:
         for (const string& word : words) {
             documents_[word][document_id] += (1.0 / words.size());
         }
-        document_rating_[document_id] = ComputeAverageRating(ratings);
-        document_status_[document_id] = status;
-        document_count_++;
+        rating_status_.emplace(document_id, DocumentData {ComputeAverageRating(ratings), status});
     }
 
     template <typename Predicate>
@@ -100,8 +97,8 @@ public:
                                     return status == request_status; });
     } 
 
-    int GetDocumentCount() {
-        return document_count_;
+    int GetDocumentCount() const {
+        return rating_status_.size();
     }
 
       tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const {
@@ -110,7 +107,7 @@ public:
         for(const string& word : query_words.minus_words) {
             if(documents_.count(word)){
                 if (documents_.at(word).count(document_id)) {
-                    return tuple(words, document_status_.at(document_id));
+                    return tuple(words, rating_status_.at(document_id).status);
                 }
             }
         }
@@ -121,17 +118,18 @@ public:
                 }
             }
         }
-        return tuple(words, document_status_.at(document_id));
+        return tuple(words, rating_status_.at(document_id).status);
     }
 
 private:
     
     map<string, map<int, double>> documents_;
     set<string> stop_words_;    
-    int document_count_ = 0;
-    map<int, int> document_rating_;
-    map<int, DocumentStatus> document_status_;
-
+    struct DocumentData {
+        int rating;
+        DocumentStatus status;
+    };
+    map<int, DocumentData> rating_status_;
     struct Query {
         set<string> plus_words;
         set<string> minus_words;
@@ -171,7 +169,7 @@ private:
     double CalculateIDF(const string& word) const {
         double idf = 0.0;
         if (documents_.count(word)) {
-            idf = log((document_count_ * 1.0) / documents_.at(word).size());
+            idf = log((GetDocumentCount() * 1.0) / documents_.at(word).size());
         }
         return idf;
     }
@@ -185,25 +183,24 @@ private:
         vector<Document> matched_documents;
         map<int, double> document_to_relevance;
         for (const auto& word : query_words.plus_words) {            
-            if (documents_.count(word)) {
+            if (documents_.count(word) > 0) {
                 for (const auto& [document_id, term_freq] : documents_.at(word)) {                    
-                //Если я правильно понял, вы предлагаете объеденить данные о рейтинге и статусе в один контейнер?
-                //И в условии цикла распаковать его, вытащить из него id, статус, рейтинг и сразу передать в функцию-предикат?                 
-                    if (predicate(document_id, document_status_.at(document_id), document_rating_.at(document_id))) {
+                    DocumentData rs = rating_status_.at(document_id);                 
+                    if (predicate(document_id, rs.status, rs.rating)) {
                         document_to_relevance[document_id] += term_freq * CalculateIDF(word);
                     }
                 }
             }
         }
         for (const auto& word : query_words.minus_words) {                
-            if (documents_.count(word)){
+            if (documents_.count(word) > 0) {
                 for (const auto& [document_id, term_freq] : documents_.at(word)) {
                     document_to_relevance.erase(document_id);
                 }
             }
         }
         for (const auto& [document_id, relevance] : document_to_relevance) {
-            matched_documents.push_back({document_id, relevance, document_rating_.at(document_id)});
+            matched_documents.push_back({document_id, relevance, rating_status_.at(document_id).rating});
         }
         return matched_documents;
     }
@@ -240,6 +237,5 @@ int main() {
     for (const Document& document : search_server.FindTopDocuments("пушистый ухоженный кот"s, [](int document_id, DocumentStatus status, int rating) { return document_id % 2 == 0; })) {
         PrintDocument(document);
     }
-
     return 0;
 }
