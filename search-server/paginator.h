@@ -1,7 +1,8 @@
 #pragma once
-#include <ostream>
-#include <iterator>
+
 #include <algorithm>
+#include <iterator>
+#include <ostream>
 #include <vector>
 
 template <typename Iterator>
@@ -25,6 +26,7 @@ private:
     Iterator first_, last_;
     size_t size_;
 };
+
 template <typename Iterator>
 std::ostream& operator<<(std::ostream& out, const IteratorRange<Iterator>& range) {
     for (Iterator it = range.begin(); it != range.end(); ++it) {
@@ -32,6 +34,7 @@ std::ostream& operator<<(std::ostream& out, const IteratorRange<Iterator>& range
     }
     return out;
 }
+
 template <typename Iterator>
 class Paginator {
 public:
@@ -56,6 +59,7 @@ public:
 private:
     std::vector<IteratorRange<Iterator>> pages_;
 };
+
 template <typename Container>
 auto Paginate(const Container& c, size_t page_size) {
     return Paginator(begin(c), end(c), page_size);

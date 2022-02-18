@@ -2,6 +2,8 @@
 #include "request_queue.h"
 #include "paginator.h"
 
+#include <iostream>
+
 using namespace std;
 
 int main() {
