@@ -1,9 +1,9 @@
 #include "document.h"
 
-Document::Document(int id, double relevance, int rating) {
-    Document::id = id;
-    Document::relevance = relevance;
-    Document::rating = rating;
+Document::Document(int _id, double _relevance, int _rating) {
+    id = _id;
+    relevance = _relevance;
+    rating = _rating;
 }
 
 std::ostream& operator<<(std::ostream& out, const Document& document) {
