@@ -11,8 +11,10 @@
 #include <tuple>
 #include <vector>
 #include <iterator>
+#include <numeric>
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
+const double PRECISION = 1e-6;
 
 class SearchServer {
 public:
@@ -86,7 +88,7 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
     std::sort(matched_documents.begin(), matched_documents.end(),
      [](const Document& lhs, const Document& rhs) {
              return lhs.relevance > rhs.relevance
-                 || (std::abs(lhs.relevance - rhs.relevance) < 1e-6 && lhs.rating > rhs.rating);
+                 || (std::abs(lhs.relevance - rhs.relevance) < PRECISION && lhs.rating > rhs.rating);
          });
     if (matched_documents.size() > MAX_RESULT_DOCUMENT_COUNT) {
         matched_documents.resize(MAX_RESULT_DOCUMENT_COUNT);
